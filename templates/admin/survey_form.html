@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}{% if edit %}Редактирование{% else %}Создание{% endif %} опроса{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <h2 class="mb-4">{% if edit %}Редактировать опрос{% else %}Новый опрос{% endif %}</h2>
+        <form method="POST" id="surveyForm" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label">Название опроса</label>
+                <input type="text" class="form-control" name="title" placeholder="Название опроса" required>
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Описание</label>
+                <textarea class="form-control" name="description" rows="2" placeholder="Краткое описание"></textarea>
+            </div>
+
+            <h4>Вопросы</h4>
+            <div id="questionsContainer">
+                <!-- Вопросы будут добавляться динамически через JS -->
+            </div>
+
+            <button type="button" id="add-question" class="btn btn-outline-primary mb-4">+ Добавить вопрос</button>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-success btn-lg">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    let questionIndex = 0;
+
+    const container = document.getElementById('questionsContainer');
+    const addQuestionBtn = document.getElementById('add-question');
+
+    function createQuestionHTML(index) {
+        return `
+        <div class="card mb-3 question-block">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-7">
+                        <label class="form-label">Текст вопроса</label>
+                        <input type="text" class="form-control" name="questions-${index}-text" placeholder="Введите вопрос" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Тип</label>
+                        <select class="form-select question-type" name="questions-${index}-question_type">
+                            <option value="radio">Одиночный выбор</option>
+                            <option value="checkbox">Множественный выбор</option>
+                            <option value="text">Текст</option>
+                            <option value="textarea">Многострочный текст</option>
+                            <option value="rating">Оценка (1-5)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="questions-${index}-is_required" value="y">
+                            <label class="form-check-label">Обязательный</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="options-container mt-2" style="display:block;">
+                    <label class="form-label">Варианты ответа</label>
+                    <div class="input-group mb-1 option-row">
+                        <input type="text" class="form-control" name="questions-${index}-options-0-text" placeholder="Вариант ответа">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-option">×</button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary add-option">+ Добавить вариант</button>
+                </div>
+                <input type="hidden" name="questions-${index}-sort_order" value="${index}">
+                <button type="button" class="btn btn-sm btn-outline-danger mt-2 remove-question">Удалить вопрос</button>
+            </div>
+        </div>`;
+    }
+
+    // Добавление первого вопроса при загрузке, если их нет
+    if (container.children.length === 0) {
+        container.insertAdjacentHTML('beforeend', createQuestionHTML(0));
+        attachEventsToBlock(container.lastElementChild);
+        questionIndex = 1;
+    } else {
+        questionIndex = container.children.length;
+    }
+
+    addQuestionBtn.addEventListener('click', function() {
+        container.insertAdjacentHTML('beforeend', createQuestionHTML(questionIndex));
+        attachEventsToBlock(container.lastElementChild);
+        questionIndex++;
+    });
+
+    function attachEventsToBlock(block) {
+        if (!block) return;
+
+        const typeSelect = block.querySelector('.question-type');
+        const optionsDiv = block.querySelector('.options-container');
+
+        function toggleOptions() {
+            const type = typeSelect.value;
+            optionsDiv.style.display = (type === 'radio' || type === 'checkbox') ? 'block' : 'none';
+        }
+        typeSelect.addEventListener('change', toggleOptions);
+        toggleOptions();
+
+        // Удаление вопроса
+        block.querySelector('.remove-question').addEventListener('click', function() {
+            if (container.querySelectorAll('.question-block').length > 1) {
+                block.remove();
+            } else {
+                alert('Должен остаться хотя бы один вопрос.');
+            }
+        });
+
+        // Добавление варианта
+        block.querySelector('.add-option').addEventListener('click', function() {
+            const optionRows = block.querySelectorAll('.option-row');
+            const lastRow = optionRows[optionRows.length - 1];
+            const newRow = lastRow.cloneNode(true);
+            newRow.querySelector('input').value = '';
+            const optIndex = optionRows.length;
+            const questionIdx = block.querySelector('input[name^="questions-"]').name.match(/questions-(\d+)-/)[1];
+            newRow.querySelector('input').name = `questions-${questionIdx}-options-${optIndex}-text`;
+            lastRow.parentNode.insertBefore(newRow, lastRow.nextSibling);
+            newRow.querySelector('.remove-option').addEventListener('click', function() {
+                const totalOpts = block.querySelectorAll('.option-row').length;
+                if (totalOpts > 1) {
+                    newRow.remove();
+                } else {
+                    alert('Должен остаться хотя бы один вариант.');
+                }
+            });
+        });
+
+        // Удаление варианта
+        block.querySelectorAll('.remove-option').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const totalOpts = block.querySelectorAll('.option-row').length;
+                if (totalOpts > 1) {
+                    e.target.closest('.option-row').remove();
+                } else {
+                    alert('Должен остаться хотя бы один вариант.');
+                }
+            });
+        });
+    }
+
+    document.querySelectorAll('.question-block').forEach(attachEventsToBlock);
+})();
+</script>
+{% endblock %}

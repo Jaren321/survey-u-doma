@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Ответы на опрос «{{ survey.title }}»{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Ответы на опрос «{{ survey.title }}»</h2>
+    <div>
+        <a href="{{ url_for('admin.export_csv', survey_id=survey.id) }}" class="btn btn-outline-success btn-sm">Экспорт CSV</a>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">← Назад</a>
+    </div>
+</div>
+
+{% if responses %}
+<div class="table-responsive">
+    <table class="table table-bordered table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>Дата и время</th>
+                <th>IP-адрес</th>
+                {% for question in survey.questions %}
+                <th>{{ question.text }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for response in responses %}
+            <tr>
+                <td>{{ response.id }}</td>
+                <td>{{ response.submitted_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>{{ response.ip_address }}</td>
+                {% for question in survey.questions %}
+                <td>
+                    {% for answer in response.answers if answer.question_id == question.id %}
+                        {% if question.question_type == 'radio' %}
+                            {% for option in question.options if option.id|string == answer.value %}
+                                {{ option.text }}
+                            {% endfor %}
+                        {% elif question.question_type == 'checkbox' %}
+                            {% set selected_ids = answer.value.split(',') %}
+                            {% for option in question.options if option.id|string in selected_ids %}
+                                {{ option.text }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {{ answer.value }}
+                        {% endif %}
+                    {% endfor %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">На этот опрос пока нет ответов.</div>
+{% endif %}
+{% endblock %}

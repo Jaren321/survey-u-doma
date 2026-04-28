@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Панель управления — Опросы{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Список опросов</h2>
+    <a href="{{ url_for('admin.create_survey') }}" class="btn btn-success">+ Создать опрос</a>
+</div>
+
+{% if surveys %}
+<table class="table table-striped table-hover table-responsive">
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Дата создания</th>
+            <th>Статус</th>
+            <th>Ответы</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for survey in surveys %}
+        <tr>
+            <td>{{ survey.title }}</td>
+            <td>{{ survey.created_at.strftime('%d.%m.%Y') }}</td>
+            <td>
+                {% if survey.is_active %}
+                <span class="badge bg-success">Активен</span>
+                {% else %}
+                <span class="badge bg-secondary">Завершён</span>
+                {% endif %}
+            </td>
+            <td>{{ survey.responses|length }}</td>
+            <td>
+                <a href="{{ url_for('admin.view_responses', survey_id=survey.id) }}" 
+                   class="btn btn-sm btn-outline-primary">Ответы</a>
+                <a href="{{ url_for('admin.create_survey') }}?edit={{ survey.id }}" 
+                   class="btn btn-sm btn-outline-warning">Ред.</a>
+                <form method="POST" action="{{ url_for('admin.toggle_survey', survey_id=survey.id) }}" 
+                      style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-info">
+                        {% if survey.is_active %}Завершить{% else %}Активировать{% endif %}
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.delete_survey', survey_id=survey.id) }}" 
+                      style="display:inline;" 
+                      onsubmit="return confirm('Удалить опрос «{{ survey.title }}»? Это действие необратимо.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">Опросов пока нет. Создайте первый!</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Опросы сети магазинов "У дома"{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="mb-4">Доступные опросы</h2>
+        {% if surveys %}
+            <div class="list-group">
+            {% for survey in surveys %}
+                <a href="{{ url_for('public.take_survey', survey_id=survey.id) }}" 
+                   class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ survey.title }}</h5>
+                        <small>{{ survey.created_at.strftime('%d.%m.%Y') }}</small>
+                    </div>
+                    {% if survey.description %}
+                    <p class="mb-1 text-muted">{{ survey.description }}</p>
+                    {% endif %}
+                </a>
+            {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">На данный момент активных опросов нет. Загляните позже!</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
